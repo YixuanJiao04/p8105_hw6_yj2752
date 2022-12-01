@@ -1,0 +1,50 @@
+---
+title: "P8105_hw6_yj2752"
+author: "Yixuan Jiao"
+output: html_document
+---
+
+## Import packages
+
+```{r}
+library(tidyverse)
+```
+
+## Problem2
+
+```{r}
+homicide <- 
+  read_csv("./data/homicide-data.csv") %>%
+  mutate(city_state = str_c(city,",",state),
+         victim_age = as.numeric(victim_age),
+         solved_binary = if_else(disposition == "Closed by arrest", 1, 0)) %>%
+  filter(! city_state %in% c("Dallas,TX" ,"Phoenix,AZ","Kansas City,MO","Tulsa,AL")) %>%
+  filter(victim_race %in% c("White","Black")) %>%
+  select(city_state,solved_binary,victim_age,victim_race,victim_sex)
+```
+
+```{r}
+fit_logistic_homicide = 
+  homicide %>% 
+  filter(city_state == "Baltimore,MD") %>%
+  glm(solved_binary ~ victim_age + victim_race + victim_sex, data = ., family = binomial()) 
+  
+```
+
+```{r}
+fit_logistic_homicide %>% 
+  broom::tidy() %>% 
+  mutate(OR = exp(estimate),
+         ci_lower = exp(estimate - 1.96*std.error),
+         ci_upper = exp(estimate + 1.96*std.error)) %>%
+  select(term, log_OR = estimate, OR, ci_lower, ci_upper, p.value) %>% 
+  knitr::kable(digits = 3)
+  
+```
+
+```{r}
+homicide %>%
+  nest(data = -city_state) %>%
+  mutate(linear_model = map)
+```
+
