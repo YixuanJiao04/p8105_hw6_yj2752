@@ -9,6 +9,7 @@ output: html_document
 ```{r}
 library(tidyverse)
 library(purrr)
+library(modelr)
 ```
 
 ## Problem2
@@ -31,7 +32,7 @@ fit_logistic_homicide =
   filter(city_state == "Baltimore,MD") %>%
   glm(resolved_binary ~ victim_age + victim_race + victim_sex, data = ., family = binomial()) 
 ```
-The 
+The model shows that the odds ratio for solving homicides comparing male victims to female victims is 0.426 with confidence interval (0.325,0.558). 
 ```{r}
 fit_logistic_homicide %>% 
   broom::tidy() %>% 
@@ -41,7 +42,7 @@ fit_logistic_homicide %>%
   select(term, log_OR = estimate, OR, CI_lower, CI_upper, p.value) %>% 
   knitr::kable(digits = 3)
 ```
-
+Same procedure is applied to each city in the dataset. Data from each city will generate a unique model storing the column linear model. Tidy and unnest the column and only keep the vicitim_sexMale term to make the plot.
 ```{r}
 homicide <- 
   homicide %>%
@@ -54,15 +55,50 @@ homicide <-
   select(city_state,term, log_OR = estimate, OR, CI_lower, CI_upper, p.value) %>%
   filter(term == "victim_sexMale")
 
-homicide %>% knitr::kable(digits = 3)
+head(homicide) %>% knitr::kable(digits = 3)
 ```
-
+The plots shows the odds ratio of each cities with CI as error bar. Most cities (except Albuquerque, Stockton, Fresno, Nashville, and Richmond) have OR lower than 1, meaning that in different extent, the odds of having a male victim homicide case solved is generally lower among the female victim cases.
 ```{r}
 homicide %>%
   mutate(city_state = fct_reorder(city_state,OR)) %>%
   ggplot(aes(x = city_state, y = OR)) +
   geom_point() +
   geom_errorbar(aes(ymin = CI_lower, ymax = CI_upper)) +
+  labs(y = "Odds Ratio for Male Victim Homicide Solved",
+       x = "City") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+## Problem3
+
+```{r}
+baby <- 
+  read_csv("data/birthweight.csv") %>%
+  mutate(babysex = if_else(babysex == 1,"male","female"))
+```
+
+```{r}
+lm1 <- lm(bwt ~ babysex + blength + momage + parity + delwt + ppwt, data = baby)
+```
+
+```{r}
+baby %>%
+  add_residuals(lm1) %>%
+  add_predictions(lm1) %>%
+  ggplot(aes(x = pred, y = resid)) + 
+  geom_point()
+```
+
+```{r}
+lm2 <- lm(bwt ~ blength + gaweeks, data = baby)
+
+lm3 <- lm(bwt ~ (bhead + blength + babysex)^3, data = baby)
+```
+
+```{r}
+crossv_mc(baby,100) %>%
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)) %>%
 ```
 
