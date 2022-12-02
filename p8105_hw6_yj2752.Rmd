@@ -8,6 +8,7 @@ output: html_document
 
 ```{r}
 library(tidyverse)
+library(purrr)
 ```
 
 ## Problem2
@@ -20,6 +21,7 @@ homicide <-
          solved_binary = if_else(disposition == "Closed by arrest", 1, 0)) %>%
   filter(! city_state %in% c("Dallas,TX" ,"Phoenix,AZ","Kansas City,MO","Tulsa,AL")) %>%
   filter(victim_race %in% c("White","Black")) %>%
+  filter(victim_sex %in% c("Male","Female")) %>%
   select(city_state,solved_binary,victim_age,victim_race,victim_sex)
 ```
 
@@ -28,23 +30,39 @@ fit_logistic_homicide =
   homicide %>% 
   filter(city_state == "Baltimore,MD") %>%
   glm(solved_binary ~ victim_age + victim_race + victim_sex, data = ., family = binomial()) 
-  
 ```
 
 ```{r}
 fit_logistic_homicide %>% 
   broom::tidy() %>% 
   mutate(OR = exp(estimate),
-         ci_lower = exp(estimate - 1.96*std.error),
-         ci_upper = exp(estimate + 1.96*std.error)) %>%
-  select(term, log_OR = estimate, OR, ci_lower, ci_upper, p.value) %>% 
+         CI_lower = exp(estimate - 1.96*std.error),
+         CI_upper = exp(estimate + 1.96*std.error)) %>%
+  select(term, log_OR = estimate, OR, CI_lower, CI_upper, p.value) %>% 
   knitr::kable(digits = 3)
-  
+```
+
+```{r}
+homicide <- 
+  homicide %>%
+  nest(data = -city_state) %>%
+  mutate(linear_model = map(.x = data, ~glm(solved_binary ~ victim_age + victim_race + victim_sex, data = .x, family =  binomial()) %>% broom::tidy())) %>%
+  unnest(linear_model) %>%
+  mutate(OR = exp(estimate),
+         CI_lower = exp(estimate - 1.96*std.error),
+         CI_upper = exp(estimate + 1.96*std.error)) %>%
+  select(city_state,term, log_OR = estimate, OR, CI_lower, CI_upper, p.value) %>%
+  filter(term == "victim_sexMale")
+
+homicide %>% knitr::kable(digits = 3)
 ```
 
 ```{r}
 homicide %>%
-  nest(data = -city_state) %>%
-  mutate(linear_model = map)
+  mutate(city_state = fct_reorder(city_state,OR)) %>%
+  ggplot(aes(x = city_state, y = OR)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = CI_lower, ymax = CI_upper)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 ```
 
