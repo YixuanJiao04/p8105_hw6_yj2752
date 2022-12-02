@@ -12,26 +12,26 @@ library(purrr)
 ```
 
 ## Problem2
-
+First, cleaning the dataset. Certain cities have been excluded, only white and black are kept for race analysis. Unknown sex are dropped.
 ```{r}
 homicide <- 
   read_csv("./data/homicide-data.csv") %>%
   mutate(city_state = str_c(city,",",state),
          victim_age = as.numeric(victim_age),
-         solved_binary = if_else(disposition == "Closed by arrest", 1, 0)) %>%
+         resolved_binary = if_else(disposition == "Closed by arrest", 1, 0)) %>%
   filter(! city_state %in% c("Dallas,TX" ,"Phoenix,AZ","Kansas City,MO","Tulsa,AL")) %>%
   filter(victim_race %in% c("White","Black")) %>%
   filter(victim_sex %in% c("Male","Female")) %>%
-  select(city_state,solved_binary,victim_age,victim_race,victim_sex)
+  select(city_state,resolved_binary,victim_age,victim_race,victim_sex)
 ```
-
+Fitting the linear model for Baltimore, MD with resolved status as outcome and age, sex, race as predictors.
 ```{r}
 fit_logistic_homicide = 
   homicide %>% 
   filter(city_state == "Baltimore,MD") %>%
-  glm(solved_binary ~ victim_age + victim_race + victim_sex, data = ., family = binomial()) 
+  glm(resolved_binary ~ victim_age + victim_race + victim_sex, data = ., family = binomial()) 
 ```
-
+The 
 ```{r}
 fit_logistic_homicide %>% 
   broom::tidy() %>% 
@@ -46,7 +46,7 @@ fit_logistic_homicide %>%
 homicide <- 
   homicide %>%
   nest(data = -city_state) %>%
-  mutate(linear_model = map(.x = data, ~glm(solved_binary ~ victim_age + victim_race + victim_sex, data = .x, family =  binomial()) %>% broom::tidy())) %>%
+  mutate(linear_model = map(.x = data, ~glm(resolved_binary ~ victim_age + victim_race + victim_sex, data = .x, family =  binomial()) %>% broom::tidy())) %>%
   unnest(linear_model) %>%
   mutate(OR = exp(estimate),
          CI_lower = exp(estimate - 1.96*std.error),
