@@ -1,7 +1,7 @@
 ---
 title: "P8105_hw6_yj2752"
 author: "Yixuan Jiao"
-output: html_document
+output: github_document
 ---
 
 ## Import packages
@@ -14,7 +14,7 @@ library(modelr)
 
 ## Problem2
 First, cleaning the dataset. Certain cities have been excluded, only white and black are kept for race analysis. Unknown sex are dropped.
-```{r}
+```{r warning=FALSE, message=FALSE}
 homicide <- 
   read_csv("./data/homicide-data.csv") %>%
   mutate(city_state = str_c(city,",",state),
