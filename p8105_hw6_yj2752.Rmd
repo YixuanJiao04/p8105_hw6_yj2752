@@ -70,17 +70,17 @@ homicide %>%
 ```
 
 ## Problem3
-
+First, load the dataset and clean the data. The data set has no missing value. I changed babysex's number into two factors.
 ```{r}
 baby <- 
   read_csv("data/birthweight.csv") %>%
   mutate(babysex = if_else(babysex == 1,"male","female"))
 ```
-
+By searching on internet, I believe mother's and baby's physical condition is crucial to the birthweight. So I decide to build the model according to baby's physical measure and certain mother's important measures.
 ```{r}
 lm1 <- lm(bwt ~ babysex + blength + momage + parity + delwt + ppwt, data = baby)
 ```
-
+The predictions vs. residuals polot is shown below, most of the part is around 0.
 ```{r}
 baby %>%
   add_residuals(lm1) %>%
@@ -88,13 +88,14 @@ baby %>%
   ggplot(aes(x = pred, y = resid)) + 
   geom_point()
 ```
-
+The formulas for other 2 models are shown below with their summary
 ```{r}
 lm2 <- lm(bwt ~ blength + gaweeks, data = baby)
-
 lm3 <- lm(bwt ~ (bhead + blength + babysex)^3, data = baby)
+lm2 %>% broom::tidy()
+lm3 %>% broom::tidy()
 ```
-
+The cross validation result shows my model is similar to the model that only contains 2 main effect. And the last model contains head circumstance, length and sex and all interactions has overall lower rmse distribution (indicating that's possibly a better model comparing the first 2). 
 ```{r}
 crossv_mc(baby,100) %>%
   mutate(
